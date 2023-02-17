@@ -25,4 +25,4 @@ runs:
 
     - name: Trigger & monitor
       run: python $GITHUB_ACTION_PATH/main.py
-      shell: bash
+      shell: bash -eux {0}
