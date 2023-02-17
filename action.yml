@@ -1,0 +1,28 @@
+name: Trigger private downstream
+description: |
+  A Github action that triggers workflows using `repository_dispatch` event and monitors result.
+inputs:
+  owner:
+    description: Owner of the target repository.
+    required: true
+  repository:
+    description: Name of the repository that contains target workflow.
+    required: true
+  event_type:
+    description: Corresponds to `repository_dispatch.types` of the target workflow.
+    required: true
+  payload:
+    description: JSON object containing data to be passed to target workflow.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Trigger & monitor
+      run: python $GITHUB_ACTION_PATH/main.py
+      shell: bash
