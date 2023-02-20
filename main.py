@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import sys
 import time
 import uuid
@@ -38,6 +39,10 @@ def error(msg: str) -> None:
 
 def debug(msg: str) -> None:
     print(f"::debug::{msg}")
+
+
+def warning(msg: str) -> None:
+    print(f"::warning::{msg}")
 
 
 @group("Inputs")
@@ -181,6 +186,37 @@ def get_workflow_run_conclusion(session: requests.Session, run: dict) -> None:
         time.sleep(10)
 
 
+def comment_pr(session: requests.Session, conclusion: str, run_url: str) -> None:
+    if (
+        os.getenv("GITHUB_EVENT_NAME") != "pull_request"
+        or not os.getenv("GITHUB_REF")
+        or not os.getenv("GITHUB_REPOSITORY")
+    ):
+        return
+
+    body = (
+        f"Workflow dispatched for repository ... finished with conclusion {conclusion.upper()}."
+        f"View the logs at {run_url}."
+    )
+
+    pr_number = (
+        os.getenv("GITHUB_REF").removeprefix("refs/pull/").removesuffix("/merge")
+    )
+    owner, repo = os.getenv("GITHUB_REPOSITORY").split("/")
+
+    pr_url = f"{GITHUB_BASE_URL}/repos/{owner}/{repo}/issues/{pr_number}/comments"
+    data = {"body": body}
+
+    response = session.post(pr_url, data=json.dumps(data))
+
+    if response.status_code != requests.codes.created:
+        warning(
+            f"==> {response.status_code}: Error posting comment to pull request {pr_url}"
+        )
+        print(response.json())
+        sys.exit(1)
+
+
 def main():
     inputs = get_args()
 
@@ -193,7 +229,6 @@ def main():
         session, guid, inputs.get("owner"), inputs.get("repo")
     )
     get_workflow_run_conclusion(session, workflow_run)
-    # if pr, comment link
     pass
 
 
