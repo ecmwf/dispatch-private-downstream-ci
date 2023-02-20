@@ -82,7 +82,7 @@ def dispatch_workflow(
         print(f"Workflow triggered: {guid}")
         return guid
     else:
-        print(f"==> {response.status_code}: Error dispatching workflow!")
+        error(f"==> {response.status_code}: Error dispatching workflow!")
         print(response.json())
         sys.exit(1)
 
@@ -93,7 +93,7 @@ def check_workflow_id(session: requests.Session, url: str) -> str:
     response = session.get(url)
 
     if response.status_code != requests.codes.ok:
-        print(f"{response.status_code}: Failed GET {url}")
+        error(f"{response.status_code}: Failed GET {url}")
         print(response.json())
         sys.exit(1)
 
@@ -123,7 +123,7 @@ def get_workflow(session: requests.Session, guid: str, owner: str, repo: str) ->
         print(f"==> GET: {response.url}")
 
         if response.status_code != requests.codes.ok:
-            print(f"{response.status_code}: Failed GET request")
+            error(f"{response.status_code}: Failed GET request")
             print(response.json())
             sys.exit(1)
 
@@ -136,7 +136,7 @@ def get_workflow(session: requests.Session, guid: str, owner: str, repo: str) ->
                 return github_id
 
         if datetime.now() - start_time > timedelta(minutes=5):
-            print("Failed getting workflow run for {guid}")
+            error("Failed getting workflow run for {guid}")
             sys.exit(1)
         time.sleep(10)
 
