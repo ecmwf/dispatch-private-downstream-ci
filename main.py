@@ -106,7 +106,9 @@ def check_workflow_id(session: requests.Session, url: str) -> str:
 
 
 @group("Get workflow for ID")
-def get_workflow(session: requests.Session, guid: str, owner: str, repo: str) -> str:
+def get_workflow_run(
+    session: requests.Session, guid: str, owner: str, repo: str
+) -> dict:
     # get T minus 2 minutes in ISO format
     start_time = datetime.now()
     timestamp = datetime.now(tz=timezone.utc) - timedelta(minutes=2)
@@ -133,14 +135,43 @@ def get_workflow(session: requests.Session, guid: str, owner: str, repo: str) ->
             if guid == check_workflow_id(session, run.get("jobs_url")):
                 github_id = str(run.get("id"))
                 print(f"GitHub ID for WF {guid}: {github_id}")
-                return github_id
+                return run
 
         if datetime.now() - start_time > timedelta(minutes=5):
             error("Failed getting workflow run for {guid}")
             sys.exit(1)
         time.sleep(10)
 
-    # timeout after few minutes
+
+def get_workflow_run_conclusion(session: requests.Session, run: dict) -> None:
+    start_time = datetime.now()
+    url = run.get("url")
+    while True:
+        response = session.get(url)
+
+        if response.status_code != requests.codes.ok:
+            error(f"{response.status_code}: Failed GET request {url}")
+            print(response.json())
+            sys.exit(1)
+
+        data: dict = response.json()
+        conclusion = data.get("conclusion")
+        html_url = data.get("html_url")
+        if conclusion == "success":
+            print("Workflow finished SUCCESSFULLY!")
+            print(html_url)
+            return
+        if conclusion == "failure":
+            error("Workflow FAILED!")
+            print(html_url)
+            return
+
+        if datetime.now() - start_time > timedelta(hours=1):
+            error("Timeout: Workflow has not finished")
+            print(html_url)
+            sys.exit(1)
+
+        time.sleep(10)
 
 
 def main():
@@ -151,9 +182,10 @@ def main():
     session.headers = {"Authorization": f"token {inputs.get('token')}"}
 
     guid = dispatch_workflow(session, **inputs)
-    github_id = get_workflow(session, guid, inputs.get("owner"), inputs.get("repo"))
-    # poll api for wf status (timeout)
-    # exit ok/ko, link to wf
+    workflow_run = get_workflow_run(
+        session, guid, inputs.get("owner"), inputs.get("repo")
+    )
+    get_workflow_run_conclusion(session, workflow_run)
     # if pr, comment link
     pass
 
