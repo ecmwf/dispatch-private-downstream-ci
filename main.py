@@ -1,7 +1,9 @@
 import argparse
 import json
 import sys
+import time
 import uuid
+from datetime import datetime, timedelta, timezone
 
 import requests
 
@@ -65,11 +67,11 @@ def dispatch_workflow(
     **kwargs,
 ):
     url = f"{GITHUB_BASE_URL}/repos/{owner}/{repo}/dispatches"
-    id = str(uuid.uuid4())
+    guid = str(uuid.uuid4())
     data = {
         "event_type": event_type,
         "client_payload": {
-            "id": id,
+            "id": guid,
             "inputs": payload,
         },
     }
@@ -77,12 +79,68 @@ def dispatch_workflow(
     response = session.post(url, data=json.dumps(data))
 
     if response.status_code == requests.codes.no_content:
-        print(f"Workflow triggered: {id}")
-        return id
+        print(f"Workflow triggered: {guid}")
+        return guid
     else:
         print(f"==> {response.status_code}: Error dispatching workflow!")
         print(response.json())
         sys.exit(1)
+
+
+def check_workflow_id(session: requests.Session, url: str) -> str:
+    """Returns name of second step in first job, i.e. where we store our wf GUID"""
+
+    response = session.get(url)
+
+    if response.status_code != requests.codes.ok:
+        print(f"{response.status_code}: Failed GET {url}")
+        print(response.json())
+        sys.exit(1)
+
+    data = response.json().get("jobs")
+    steps = data[0].get("steps")
+    if len(steps) < 2:
+        return ""
+    guid = steps[1].get("name")  # Our randomly generated GUID
+    return guid
+
+
+@group("Get workflow for ID")
+def get_workflow(session: requests.Session, guid: str, owner: str, repo: str) -> str:
+    # get T minus 2 minutes in ISO format
+    start_time = datetime.now()
+    timestamp = datetime.now(tz=timezone.utc) - timedelta(minutes=2)
+    timestamp_formatted = timestamp.isoformat(timespec="seconds")
+
+    url = f"{GITHUB_BASE_URL}/repos/{owner}/{repo}/actions/runs"
+    params = {"event": "repository_dispatch", "created": f">{timestamp_formatted}"}
+
+    print(f"Polling API for WF {guid}")
+    time.sleep(10)  # Allow the workflow to start
+    while True:
+        # Poll repository runs repeatedly
+        response = session.get(url, params=params)
+        print(f"==> GET: {response.url}")
+
+        if response.status_code != requests.codes.ok:
+            print(f"{response.status_code}: Failed GET request")
+            print(response.json())
+            sys.exit(1)
+
+        data: dict = response.json()
+
+        for run in data.get("workflow_runs"):
+            if guid == check_workflow_id(session, run.get("jobs_url")):
+                github_id = str(run.get("id"))
+                print(f"GitHub ID for WF {guid}: {github_id}")
+                return github_id
+
+        if datetime.now() - start_time > timedelta(minutes=5):
+            print("Failed getting workflow run for {guid}")
+            sys.exit(1)
+        time.sleep(10)
+
+    # timeout after few minutes
 
 
 def main():
@@ -92,8 +150,8 @@ def main():
     session = requests.Session()
     session.headers = {"Authorization": f"token {inputs.get('token')}"}
 
-    dispatch_workflow(session, **inputs)
-    # poll api for wf with id (timeout)
+    guid = dispatch_workflow(session, **inputs)
+    github_id = get_workflow(session, guid, inputs.get("owner"), inputs.get("repo"))
     # poll api for wf status (timeout)
     # exit ok/ko, link to wf
     # if pr, comment link
