@@ -88,7 +88,10 @@ def dispatch_workflow(
 
 
 def check_workflow_id(session: requests.Session, url: str) -> str:
-    """Returns name of second step in first job, i.e. where we store our wf GUID"""
+    """
+    Returns name of second step in first job,
+    i.e. where we store our wf GUID
+    """
 
     response = session.get(url)
 
@@ -115,7 +118,10 @@ def get_workflow_run(
     timestamp_formatted = timestamp.isoformat(timespec="seconds")
 
     url = f"{GITHUB_BASE_URL}/repos/{owner}/{repo}/actions/runs"
-    params = {"event": "repository_dispatch", "created": f">{timestamp_formatted}"}
+    params = {
+        "event": "repository_dispatch",
+        "created": f">{timestamp_formatted}",
+    }
 
     print(f"Polling API for WF {guid}")
     time.sleep(10)  # Allow the workflow to start
