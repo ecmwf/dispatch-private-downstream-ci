@@ -33,8 +33,8 @@ runs:
         # and https://github.com/actions/toolkit/issues/1035
 
     - run: pip install -r $GITHUB_ACTION_PATH/requirements.txt
-      shell: bash -eux {0}
+      shell: bash
 
     - name: Trigger & monitor
       run: python $GITHUB_ACTION_PATH/main.py ${{ inputs.token }} ${{ inputs.owner }} ${{ inputs.repository }} ${{ inputs.event_type }} '${{ inputs.payload }}'
-      shell: bash -eux {0}
+      shell: bash
