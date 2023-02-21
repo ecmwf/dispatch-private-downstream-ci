@@ -10,6 +10,7 @@ See [action.yml](action.yml)
 steps:
   - uses: ecmwf-actions/dispatch-private-downstream-ci@main
     with:
+      inputs: ${{ secrets.MY_SECRET_TOKEN }}
       owner: owner
       repository: repo
       event_type: my-custom-event
