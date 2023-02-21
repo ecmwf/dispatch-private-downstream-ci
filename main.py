@@ -170,6 +170,7 @@ def get_workflow_run_conclusion(session: requests.Session, run: dict) -> None:
         if conclusion == "failure":
             error("Workflow FAILED!")
             print(html_url)
+            sys.exit(1)
             return
 
         if datetime.now() - start_time > timedelta(hours=1):
