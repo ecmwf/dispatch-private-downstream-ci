@@ -36,5 +36,5 @@ runs:
       shell: bash -eux {0}
 
     - name: Trigger & monitor
-      run: python $GITHUB_ACTION_PATH/main.py ${{ inputs.token }} ${{ inputs.owner }} ${{ inputs.repository }} ${{ inputs.event_type }} ${{ inputs.payload }}
+      run: python $GITHUB_ACTION_PATH/main.py ${{ inputs.token }} ${{ inputs.owner }} ${{ inputs.repository }} ${{ inputs.event_type }} '${{ inputs.payload }}'
       shell: bash -eux {0}
