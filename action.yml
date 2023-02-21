@@ -2,6 +2,9 @@ name: Trigger private downstream
 description: |
   A Github action that triggers workflows using `repository_dispatch` event and monitors result.
 inputs:
+  token:
+    description: Github token with READ and WRITE access to actions, code, and pull requests and READ access to metadata
+    required: true
   owner:
     description: Owner of the target repository.
     required: true
@@ -33,5 +36,5 @@ runs:
       shell: bash -eux {0}
 
     - name: Trigger & monitor
-      run: python $GITHUB_ACTION_PATH/main.py
+      run: python $GITHUB_ACTION_PATH/main.py ${{ inputs.token }} ${{ inputs.owner }} ${{ inputs.repository }} ${{ inputs.event_type }} ${{ inputs.payload }}
       shell: bash -eux {0}
