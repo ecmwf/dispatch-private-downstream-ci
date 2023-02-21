@@ -100,7 +100,7 @@ def check_workflow_id(session: requests.Session, url: str) -> str:
         print(response.json())
         sys.exit(1)
 
-    data = response.json().get("jobs")
+    data = response.json().get("jobs", [])
     steps = data[0].get("steps")
     if len(steps) < 2:
         return ""
