@@ -22,8 +22,12 @@ runs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
-        cache: 'pip' # caching pip dependencies
-        cache-dependency-path: ${{ github.action_path }}/requirements.txt
+        # cache: 'pip'
+        # cache-dependency-path: ${{ github.action_path }}/requirements.txt
+
+        # caching dependencies is not possible in composite actions
+        # see https://github.com/actions/setup-python/issues/361
+        # and https://github.com/actions/toolkit/issues/1035
 
     - run: pip install -r $GITHUB_ACTION_PATH/requirements.txt
       shell: bash -eux {0}
