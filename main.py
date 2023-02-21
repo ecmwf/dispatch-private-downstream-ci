@@ -175,6 +175,7 @@ def get_workflow_run_conclusion(session: requests.Session, run: dict) -> None:
         if conclusion == "failure":
             error("Workflow FAILED!")
             print(html_url)
+            comment_pr(session, conclusion, html_url)
             sys.exit(1)
             return
 
@@ -194,10 +195,8 @@ def comment_pr(session: requests.Session, conclusion: str, run_url: str) -> None
     ):
         return
 
-    body = (
-        f"Workflow dispatched for repository ... finished with conclusion {conclusion.upper()}."
-        f"View the logs at {run_url}."
-    )
+    body = f"""Private Downstream CI finished with conclusion {conclusion.upper()}.
+        View the logs at {run_url}."""
 
     pr_number = (
         os.getenv("GITHUB_REF").removeprefix("refs/pull/").removesuffix("/merge")
@@ -211,7 +210,8 @@ def comment_pr(session: requests.Session, conclusion: str, run_url: str) -> None
 
     if response.status_code != requests.codes.created:
         warning(
-            f"==> {response.status_code}: Error posting comment to pull request {pr_url}"
+            f"==> {response.status_code}: Error posting comment to pull request"
+            f"{pr_url}"
         )
         print(response.json())
         sys.exit(1)
@@ -229,7 +229,6 @@ def main():
         session, guid, inputs.get("owner"), inputs.get("repo")
     )
     get_workflow_run_conclusion(session, workflow_run)
-    pass
 
 
 if __name__ == "__main__":
