@@ -32,7 +32,10 @@ runs:
         # see https://github.com/actions/setup-python/issues/361
         # and https://github.com/actions/toolkit/issues/1035
 
-    - run: pip install -r $GITHUB_ACTION_PATH/requirements.txt
+    - run: |
+        echo "::group::Pip install"
+        pip install -r $GITHUB_ACTION_PATH/requirements.txt
+        echo "::endgroup::"
       shell: bash
 
     - name: Trigger & monitor
