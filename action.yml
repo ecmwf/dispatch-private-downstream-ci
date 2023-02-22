@@ -17,6 +17,10 @@ inputs:
   payload:
     description: JSON object containing data to be passed to target workflow.
     required: true
+  github_token:
+    description: Token used to comment on a PR if the action is called within a PR. If using GitHub Actions token ($GITHUB_TOKEN), the calling job needs pull-request write permissions.
+    required: true
+    default: ${{ github.token }}
 
 runs:
   using: composite
@@ -39,5 +43,5 @@ runs:
       shell: bash
 
     - name: Trigger & monitor
-      run: python $GITHUB_ACTION_PATH/main.py ${{ inputs.token }} ${{ inputs.owner }} ${{ inputs.repository }} ${{ inputs.event_type }} '${{ inputs.payload }}'
+      run: python $GITHUB_ACTION_PATH/main.py ${{ inputs.token }} ${{ inputs.github_token }} ${{ inputs.owner }} ${{ inputs.repository }} ${{ inputs.event_type }} '${{ inputs.payload }}'
       shell: bash

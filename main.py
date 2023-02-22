@@ -12,6 +12,11 @@ import requests
 GITHUB_BASE_URL = "https://api.github.com"
 
 
+class WF_Conclusions:
+    SUCCESS = "success"
+    FAILURE = "failure"
+
+
 def start_group(name: str) -> None:
     print(f"::group::{name}")
 
@@ -49,6 +54,7 @@ def warning(msg: str) -> None:
 def get_args() -> dict:
     parser = argparse.ArgumentParser()
     parser.add_argument("token", type=str)
+    parser.add_argument("github_token", type=str)
     parser.add_argument("owner", type=str)
     parser.add_argument("repo", type=str)
     parser.add_argument("event_type", type=str)
@@ -154,7 +160,7 @@ def get_workflow_run(
         time.sleep(10)
 
 
-def get_workflow_run_conclusion(session: requests.Session, run: dict) -> None:
+def get_workflow_run_conclusion(session: requests.Session, run: dict) -> dict:
     start_time = datetime.now()
     url = run.get("url")
     while True:
@@ -168,16 +174,14 @@ def get_workflow_run_conclusion(session: requests.Session, run: dict) -> None:
         data: dict = response.json()
         conclusion = data.get("conclusion")
         html_url = data.get("html_url")
-        if conclusion == "success":
+        if conclusion == WF_Conclusions.SUCCESS:
             print("Workflow finished SUCCESSFULLY!")
             print(html_url)
-            return
-        if conclusion == "failure":
+            return {"conclusion": conclusion, "run_url": html_url}
+        if conclusion == WF_Conclusions.FAILURE:
             error("Workflow FAILED!")
             print(html_url)
-            comment_pr(session, conclusion, html_url)
-            sys.exit(1)
-            return
+            return {"conclusion": conclusion, "run_url": html_url}
 
         if datetime.now() - start_time > timedelta(hours=1):
             error("Timeout: Workflow has not finished")
@@ -187,7 +191,7 @@ def get_workflow_run_conclusion(session: requests.Session, run: dict) -> None:
         time.sleep(10)
 
 
-def comment_pr(session: requests.Session, conclusion: str, run_url: str) -> None:
+def comment_pr(github_token: str, conclusion: str, run_url: str) -> None:
     if (
         os.getenv("GITHUB_EVENT_NAME") != "pull_request"
         or not os.getenv("GITHUB_REF")
@@ -204,9 +208,10 @@ def comment_pr(session: requests.Session, conclusion: str, run_url: str) -> None
     owner, repo = os.getenv("GITHUB_REPOSITORY").split("/")
 
     pr_url = f"{GITHUB_BASE_URL}/repos/{owner}/{repo}/issues/{pr_number}/comments"
+    headers = {"Authorization": f"token {github_token}"}
     data = {"body": body}
 
-    response = session.post(pr_url, data=json.dumps(data))
+    response = requests.post(pr_url, headers=headers, data=json.dumps(data))
 
     if response.status_code != requests.codes.created:
         warning(
@@ -214,7 +219,6 @@ def comment_pr(session: requests.Session, conclusion: str, run_url: str) -> None
             f"{pr_url}"
         )
         print(response.json())
-        sys.exit(1)
 
 
 def main():
@@ -228,7 +232,9 @@ def main():
     workflow_run = get_workflow_run(
         session, guid, inputs.get("owner"), inputs.get("repo")
     )
-    get_workflow_run_conclusion(session, workflow_run)
+    wf_result = get_workflow_run_conclusion(session, workflow_run)
+    if wf_result.get("conclusion") == WF_Conclusions.FAILURE:
+        comment_pr(inputs.get("github_token"), **wf_result)
 
 
 if __name__ == "__main__":
