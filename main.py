@@ -191,15 +191,17 @@ def get_workflow_run_conclusion(session: requests.Session, run: dict) -> dict:
         time.sleep(10)
 
 
-def comment_pr(github_token: str, conclusion: str, run_url: str) -> None:
+def comment_pr(github_token: str, wf_name: str, conclusion: str, run_url: str) -> None:
     if (
         os.getenv("GITHUB_EVENT_NAME") != "pull_request"
         or not os.getenv("GITHUB_REF")
         or not os.getenv("GITHUB_REPOSITORY")
+        or conclusion != WF_Conclusions.FAILURE
     ):
         return
 
-    body = f"""Private Downstream CI finished with conclusion {conclusion.upper()}.
+    body = f"""Private downstream CI failed.
+        Workflow name: {wf_name}
         View the logs at {run_url}."""
 
     pr_number = (
@@ -234,7 +236,7 @@ def main():
     )
     wf_result = get_workflow_run_conclusion(session, workflow_run)
     if wf_result.get("conclusion") == WF_Conclusions.FAILURE:
-        comment_pr(inputs.get("github_token"), **wf_result)
+        comment_pr(inputs.get("github_token"), workflow_run.get("name"), **wf_result)
         sys.exit(1)
 
 
