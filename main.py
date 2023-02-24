@@ -235,6 +235,7 @@ def main():
     wf_result = get_workflow_run_conclusion(session, workflow_run)
     if wf_result.get("conclusion") == WF_Conclusions.FAILURE:
         comment_pr(inputs.get("github_token"), **wf_result)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
