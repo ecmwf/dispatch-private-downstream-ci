@@ -176,12 +176,11 @@ def get_workflow_run_conclusion(session: requests.Session, run: dict) -> dict:
         html_url = data.get("html_url")
         if conclusion == WF_Conclusions.SUCCESS:
             print("Workflow finished SUCCESSFULLY!")
-            print(html_url)
-            return {"conclusion": conclusion, "run_url": html_url}
+            break
+
         if conclusion == WF_Conclusions.FAILURE:
             error("Workflow FAILED!")
-            print(html_url)
-            return {"conclusion": conclusion, "run_url": html_url}
+            break
 
         if datetime.now() - start_time > timedelta(hours=1):
             error("Timeout: Workflow has not finished")
@@ -190,17 +189,21 @@ def get_workflow_run_conclusion(session: requests.Session, run: dict) -> dict:
 
         time.sleep(10)
 
+    print(html_url)
+    return {
+        "conclusion": conclusion,
+        "run_url": html_url,
+        "wf_name": run.get("name"),
+    }
 
-def comment_pr(github_token: str, conclusion: str, run_url: str) -> None:
+
+def get_pr_url() -> str:
     if (
         os.getenv("GITHUB_EVENT_NAME") != "pull_request"
         or not os.getenv("GITHUB_REF")
         or not os.getenv("GITHUB_REPOSITORY")
     ):
-        return
-
-    body = f"""Private Downstream CI finished with conclusion {conclusion.upper()}.
-        View the logs at {run_url}."""
+        return ""
 
     pr_number = (
         os.getenv("GITHUB_REF").removeprefix("refs/pull/").removesuffix("/merge")
@@ -208,10 +211,15 @@ def comment_pr(github_token: str, conclusion: str, run_url: str) -> None:
     owner, repo = os.getenv("GITHUB_REPOSITORY").split("/")
 
     pr_url = f"{GITHUB_BASE_URL}/repos/{owner}/{repo}/issues/{pr_number}/comments"
-    headers = {"Authorization": f"token {github_token}"}
-    data = {"body": body}
 
-    response = requests.post(pr_url, headers=headers, data=json.dumps(data))
+    return pr_url
+
+
+def post_pr_comment(comment_body: str, session: requests.Session) -> None:
+    pr_url = get_pr_url()
+    data = {"body": comment_body}
+
+    response = session.post(pr_url, data=json.dumps(data))
 
     if response.status_code != requests.codes.created:
         warning(
@@ -221,6 +229,49 @@ def comment_pr(github_token: str, conclusion: str, run_url: str) -> None:
         print(response.json())
 
 
+def get_pr_comments(session: requests.Session) -> list:
+    pr_url = get_pr_url()
+    response = session.get(pr_url)
+
+    if response.status_code != requests.codes.ok:
+        warning(
+            f"==> {response.status_code}: Error fetching list of PR comments {pr_url}"
+        )
+        print(response.json())
+        return []
+
+    return response.json()
+
+
+def update_pr_comments(session: requests.Session, wf_result: dict):
+    fail_msg = f"""Private downstream CI failed.
+        Workflow name: {wf_result.get("wf_name")}
+        View the logs at {wf_result.get("run_url")}."""
+
+    success_msg = f"""Private downstream CI succeeded.
+        Workflow name: {wf_result.get("wf_name")}
+        View the logs at {wf_result.get("run_url")}."""
+
+    if wf_result.get("conclusion") == WF_Conclusions.FAILURE:
+        post_pr_comment(fail_msg, session)
+        return
+
+    comments_by_bot = list(
+        filter(
+            lambda o: o["user"]["login"] == "github-actions[bot]",
+            get_pr_comments(session),
+        )
+    )
+
+    # comment after success only if the WF previously failed
+    for comment in comments_by_bot:
+        if (
+            f"Workflow name: {wf_result.get('wf_name')}" in comment["body"]
+            and "failed" in comment["body"]
+        ):
+            post_pr_comment(success_msg, session)
+
+
 def main():
     inputs = get_args()
 
@@ -228,13 +279,19 @@ def main():
     session = requests.Session()
     session.headers = {"Authorization": f"token {inputs.get('token')}"}
 
+    # Setup Github session with github-actions token
+    actions_session = requests.Session()
+    actions_session.headers = {"Authorization": f"token {inputs.get('github_token')}"}
+
     guid = dispatch_workflow(session, **inputs)
     workflow_run = get_workflow_run(
         session, guid, inputs.get("owner"), inputs.get("repo")
     )
     wf_result = get_workflow_run_conclusion(session, workflow_run)
+
+    update_pr_comments(actions_session, wf_result)
+
     if wf_result.get("conclusion") == WF_Conclusions.FAILURE:
-        comment_pr(inputs.get("github_token"), **wf_result)
         sys.exit(1)
 
 
