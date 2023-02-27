@@ -216,7 +216,6 @@ def get_pr_url() -> str:
 
 
 def post_pr_comment(comment_body: str, session: requests.Session) -> None:
-
     pr_url = get_pr_url()
     data = {"body": comment_body}
 
