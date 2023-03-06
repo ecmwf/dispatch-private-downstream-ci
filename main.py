@@ -289,7 +289,10 @@ def main():
     )
     wf_result = get_workflow_run_conclusion(session, workflow_run)
 
-    update_pr_comments(actions_session, wf_result)
+    # add check if not pr
+
+    if get_pr_url():
+        update_pr_comments(actions_session, wf_result)
 
     if wf_result.get("conclusion") == WF_Conclusions.FAILURE:
         sys.exit(1)
