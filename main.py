@@ -112,6 +112,10 @@ def check_workflow_id(session: requests.Session, url: str) -> str:
         sys.exit(1)
 
     data = response.json().get("jobs", [])
+
+    if not data:
+        return ""
+
     steps = data[0].get("steps")
     if len(steps) < 2:
         return ""
@@ -155,7 +159,7 @@ def get_workflow_run(
                 return run
 
         if datetime.now() - start_time > timedelta(minutes=5):
-            error("Failed getting workflow run for {guid}")
+            error(f"Failed getting workflow run for {guid}")
             sys.exit(1)
         time.sleep(10)
 
