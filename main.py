@@ -68,6 +68,14 @@ def get_args() -> dict:
     return vars(args)
 
 
+def is_valid_uuid(test: str) -> bool:
+    try:
+        uuid.UUID(test, version=4)
+        return True
+    except ValueError:
+        return False
+
+
 @group("Dispatch workflow")
 def dispatch_workflow(
     session: requests.Session,
@@ -119,8 +127,12 @@ def check_workflow_id(session: requests.Session, url: str) -> str:
     steps = data[0].get("steps")
     if len(steps) < 2:
         return ""
-    guid = steps[1].get("name")  # Our randomly generated GUID
-    return guid
+
+    for step in steps:
+        if is_valid_uuid(step_name := step.get("name")):
+            return step_name
+
+    return ""
 
 
 @group("Get workflow for ID")
@@ -228,7 +240,7 @@ def post_pr_comment(comment_body: str, session: requests.Session) -> None:
     if response.status_code != requests.codes.created:
         warning(
             f"==> {response.status_code}: Error posting comment to pull request"
-            f"{pr_url}"
+            f" {pr_url}"
         )
         print(response.json())
 
