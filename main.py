@@ -87,11 +87,15 @@ def dispatch_workflow(
 ):
     url = f"{GITHUB_BASE_URL}/repos/{owner}/{repo}/dispatches"
     guid = str(uuid.uuid4())
+    ref_name = os.getenv("GITHUB_REF_NAME", "")
+    repository = os.getenv("GITHUB_REPOSITORY", "")
     data = {
         "event_type": event_type,
         "client_payload": {
             "id": guid,
             "inputs": payload,
+            "ref_name": ref_name,
+            "repository": repository,
         },
     }
     print(f"==> POST: {url}\n", data)
