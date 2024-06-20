@@ -207,7 +207,7 @@ def get_workflow_run_conclusion(session: requests.Session, run: dict) -> dict:
             print(html_url)
             sys.exit(1)
 
-        time.sleep(10)
+        time.sleep(60)
 
     print(html_url)
     return {
