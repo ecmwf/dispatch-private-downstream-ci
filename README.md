@@ -8,7 +8,7 @@ See [action.yml](action.yml)
 
 ```yaml
 steps:
-  - uses: ecmwf-actions/dispatch-private-downstream-ci@main
+  - uses: ecmwf/dispatch-private-downstream-ci@main
     with:
       inputs: ${{ secrets.MY_SECRET_TOKEN }}
       owner: owner
