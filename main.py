@@ -235,61 +235,61 @@ def get_pr_url() -> str:
     return pr_url
 
 
-def post_pr_comment(comment_body: str, session: requests.Session) -> None:
-    pr_url = get_pr_url()
-    data = {"body": comment_body}
+# def post_pr_comment(comment_body: str, session: requests.Session) -> None:
+#     pr_url = get_pr_url()
+#     data = {"body": comment_body}
 
-    response = session.post(pr_url, data=json.dumps(data))
+#     response = session.post(pr_url, data=json.dumps(data))
 
-    if response.status_code != requests.codes.created:
-        warning(
-            f"==> {response.status_code}: Error posting comment to pull request"
-            f" {pr_url}"
-        )
-        print(response.json())
-
-
-def get_pr_comments(session: requests.Session) -> list:
-    pr_url = get_pr_url()
-    response = session.get(pr_url)
-
-    if response.status_code != requests.codes.ok:
-        warning(
-            f"==> {response.status_code}: Error fetching list of PR comments {pr_url}"
-        )
-        print(response.json())
-        return []
-
-    return response.json()
+#     if response.status_code != requests.codes.created:
+#         warning(
+#             f"==> {response.status_code}: Error posting comment to pull request"
+#             f" {pr_url}"
+#         )
+#         print(response.json())
 
 
-def update_pr_comments(session: requests.Session, wf_result: dict):
-    fail_msg = f"""Private downstream CI failed.
-        Workflow name: {wf_result.get("wf_name")}
-        View the logs at {wf_result.get("run_url")}."""
+# def get_pr_comments(session: requests.Session) -> list:
+#     pr_url = get_pr_url()
+#     response = session.get(pr_url)
 
-    success_msg = f"""Private downstream CI succeeded.
-        Workflow name: {wf_result.get("wf_name")}
-        View the logs at {wf_result.get("run_url")}."""
+#     if response.status_code != requests.codes.ok:
+#         warning(
+#             f"==> {response.status_code}: Error fetching list of PR comments {pr_url}"
+#         )
+#         print(response.json())
+#         return []
 
-    if wf_result.get("conclusion") == WF_Conclusions.FAILURE:
-        post_pr_comment(fail_msg, session)
-        return
+#     return response.json()
 
-    comments_by_bot = list(
-        filter(
-            lambda o: o["user"]["login"] == "github-actions[bot]",
-            get_pr_comments(session),
-        )
-    )
 
-    # comment after success only if the WF previously failed
-    for comment in comments_by_bot:
-        if (
-            f"Workflow name: {wf_result.get('wf_name')}" in comment["body"]
-            and "failed" in comment["body"]
-        ):
-            post_pr_comment(success_msg, session)
+# def update_pr_comments(session: requests.Session, wf_result: dict):
+#     fail_msg = f"""Private downstream CI failed.
+#         Workflow name: {wf_result.get("wf_name")}
+#         View the logs at {wf_result.get("run_url")}."""
+
+#     success_msg = f"""Private downstream CI succeeded.
+#         Workflow name: {wf_result.get("wf_name")}
+#         View the logs at {wf_result.get("run_url")}."""
+
+#     if wf_result.get("conclusion") == WF_Conclusions.FAILURE:
+#         post_pr_comment(fail_msg, session)
+#         return
+
+#     comments_by_bot = list(
+#         filter(
+#             lambda o: o["user"]["login"] == "github-actions[bot]",
+#             get_pr_comments(session),
+#         )
+#     )
+
+#     # comment after success only if the WF previously failed
+#     for comment in comments_by_bot:
+#         if (
+#             f"Workflow name: {wf_result.get('wf_name')}" in comment["body"]
+#             and "failed" in comment["body"]
+#         ):
+#             post_pr_comment(success_msg, session)
 
 
 def main():
@@ -311,8 +311,8 @@ def main():
 
     # add check if not pr
 
-    if get_pr_url():
-        update_pr_comments(actions_session, wf_result)
+    #if get_pr_url():
+    #    update_pr_comments(actions_session, wf_result)
 
     if wf_result.get("conclusion") == WF_Conclusions.FAILURE:
         sys.exit(1)
