@@ -217,22 +217,22 @@ def get_workflow_run_conclusion(session: requests.Session, run: dict) -> dict:
     }
 
 
-def get_pr_url() -> str:
-    if (
-        os.getenv("GITHUB_EVENT_NAME") != "pull_request"
-        or not os.getenv("GITHUB_REF")
-        or not os.getenv("GITHUB_REPOSITORY")
-    ):
-        return ""
+# def get_pr_url() -> str:
+#     if (
+#         os.getenv("GITHUB_EVENT_NAME") != "pull_request"
+#         or not os.getenv("GITHUB_REF")
+#         or not os.getenv("GITHUB_REPOSITORY")
+#     ):
+#         return ""
 
-    pr_number = (
-        os.getenv("GITHUB_REF").removeprefix("refs/pull/").removesuffix("/merge")
-    )
-    owner, repo = os.getenv("GITHUB_REPOSITORY").split("/")
+#     pr_number = (
+#         os.getenv("GITHUB_REF").removeprefix("refs/pull/").removesuffix("/merge")
+#     )
+#     owner, repo = os.getenv("GITHUB_REPOSITORY").split("/")
 
-    pr_url = f"{GITHUB_BASE_URL}/repos/{owner}/{repo}/issues/{pr_number}/comments"
+#     pr_url = f"{GITHUB_BASE_URL}/repos/{owner}/{repo}/issues/{pr_number}/comments"
 
-    return pr_url
+#     return pr_url
 
 
 # def post_pr_comment(comment_body: str, session: requests.Session) -> None:
@@ -311,7 +311,7 @@ def main():
 
     # add check if not pr
 
-    #if get_pr_url():
+    # if get_pr_url():
     #    update_pr_comments(actions_session, wf_result)
 
     if wf_result.get("conclusion") == WF_Conclusions.FAILURE:
