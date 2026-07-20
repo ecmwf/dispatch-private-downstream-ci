@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Maintain Python dependencies from requirements.txt.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: monthly
+
+  # Maintain dependencies used by GitHub Actions workflows.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
